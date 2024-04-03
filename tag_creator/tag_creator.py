@@ -10,6 +10,8 @@ import argparse
 
 MM_TO_POINTS = 72 / 2.54 / 10
 
+#Width and Height of QRCode in mm
+WIDTH, HEIGHT = 25, 25
 
 
 def get_yt_thumbnail(url):
@@ -60,60 +62,68 @@ def surface_from_pil(im, alpha=1.0, format=cairo.FORMAT_ARGB32):
 	return surface
 
 
-def add_tag(cr, yt_url, off_x, off_y):
-	cr.rectangle(*[MM_TO_POINTS*v for v in (0+off_x,0+off_y, 20, 10)])
-	cr.rectangle(*[MM_TO_POINTS*v for v in (0+off_x,0+off_y+10, 20, 30)])
-	cr.rectangle(*[MM_TO_POINTS*v for v in (0+off_x,0+off_y+10+30, 20, 30)])
-	cr.rectangle(*[MM_TO_POINTS*v for v in (0+off_x,0+off_y+10+30+30, 20, 10)])
-	cr.rectangle(*[MM_TO_POINTS*v for v in (0+off_x,0+off_y+10+30+30+10, 20, 20)])
+def add_tag(cr, yt_url, off_x, off_y, margin, width, height):
+
+	cr.rectangle(*[MM_TO_POINTS*v for v in (0+off_x,0+off_y, width, height)]) # Thumbnail-Rectangle
+	cr.rectangle(*[MM_TO_POINTS*v for v in (0+off_x,0+off_y+margin+height, width, width)]) # QR-Code-Rectangle
 	cr.stroke()
 	
 	surface = surface_from_pil(qrcode.make(yt_url).convert('RGB'))
 	print(surface.get_width(), surface.get_height())
 
 	cr.save()
-	sfx, sfy = (20*MM_TO_POINTS/surface.get_width(), 20*MM_TO_POINTS/surface.get_height())
+	sfx, sfy = (width*MM_TO_POINTS/surface.get_width(), height*MM_TO_POINTS/surface.get_height())
 	cr.scale(sfx, sfy)
-	cr.set_source_surface(surface, off_x*MM_TO_POINTS/sfx, (off_y+10+30+30+10)*MM_TO_POINTS/sfy)
+	cr.set_source_surface(surface, off_x*MM_TO_POINTS/sfx, (off_y+margin+height)*MM_TO_POINTS/sfy)
 	cr.paint()
 	cr.restore()
 
-	thumbnail_img = get_yt_thumbnail(yt_url)
+	thumbnail_img = crop_to_square(get_yt_thumbnail(yt_url))
 	cr.save()
-	surface = surface_from_pil(thumbnail_img.transpose(Image.ROTATE_180))
-	sfx, sfy = (20*MM_TO_POINTS/surface.get_width(), 30*MM_TO_POINTS/surface.get_height())
+	surface = surface_from_pil(thumbnail_img) #.transpose(Image.ROTATE_180)
+	sfx, sfy = (width*MM_TO_POINTS/surface.get_width(), height*MM_TO_POINTS/surface.get_height())
 	cr.scale(sfx, sfy)
-	cr.set_source_surface(surface, off_x*MM_TO_POINTS/sfx, (off_y+10)*MM_TO_POINTS/sfy)
+	cr.set_source_surface(surface, off_x*MM_TO_POINTS/sfx, (off_y)*MM_TO_POINTS/sfy)
 	cr.paint()
 	cr.restore()
 
-	cr.save()
-	surface = surface_from_pil(thumbnail_img)
-	sfx, sfy = (20*MM_TO_POINTS/surface.get_width(), 30*MM_TO_POINTS/surface.get_height())
-	cr.scale(sfx, sfy)
-	cr.set_source_surface(surface, off_x*MM_TO_POINTS/sfx, (off_y+10+30)*MM_TO_POINTS/sfy)
-	cr.paint()
-	cr.restore()
-
+def crop_to_square(image):
+	width, height = image.size
+	# Find the smallest side length
+	min_side = min(width, height)
+	# Calculate coordinates for cropping
+	left = (width - min_side) / 2
+	top = (height - min_side) / 2
+	right = (width + min_side) / 2
+	bottom = (height + min_side) / 2
+	# Crop the image
+	cropped_image = cropped_image.crop((left, top, right, bottom))
+	cropped_image.show()
+	return cropped_image
 
 def draw():
 	parser = argparse.ArgumentParser(description='Convert Youtube URLs to QR code tags')
 	parser.add_argument('urls', metavar='URL', type=str, nargs='+', help='Youtube URLs')
 	args = parser.parse_args()
 
-	ps = cairo.PDFSurface("pdffile.pdf", 504, 648)
+	pdf_width, pdf_height = 504,568
+	ps = cairo.PDFSurface("pdffile.pdf", pdf_width, pdf_height)
 	cr = cairo.Context(ps)
 	cr.set_source_rgb(0, 0, 0)
 	cr.set_line_width(0.2 * MM_TO_POINTS)
 
 	idx_x = 0
 	idx_y = 0
+	margin = 5
+	width = WIDTH
+	height = HEIGHT
 	for url in args.urls:
-		add_tag(cr, url, 10+idx_x*20, 10+idx_y*100)
-		idx_x += 1
-		if idx_x >= 8:
+		if (idx_x+1)*(width+margin) >= pdf_width/MM_TO_POINTS:
 			idx_y += 1
 			idx_x = 0 
+		add_tag(cr, url, margin+idx_x*(width+margin), margin+idx_y*(height+margin)*2, margin, width, height)
+		idx_x += 1
+		
 	
 	cr.show_page()
 
