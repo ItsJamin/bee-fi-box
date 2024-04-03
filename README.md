@@ -1,5 +1,8 @@
 # Introduction
 
+QR-Code-Based Musicbox. Based on befinitiv's befibox, but with my own approach to it.
+
+
 This repository hold the code and mechanics for the DIY Youtube Music Player Box.
 The root folder contains everything needed to install this on a Raspberry. In addition to that, you'll also find the folder "tag_creator" that contains a Python script for generating paper templates for Youtube QR tags with thumbnails.
 The mech folder contains the OpenSCAD mechanic designs together with some random example tags models.
