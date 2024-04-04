@@ -78,7 +78,7 @@ def add_tag(cr, yt_url, off_x, off_y, margin, width, height):
 	cr.paint()
 	cr.restore()
 
-	thumbnail_img = crop_to_square(get_yt_thumbnail(yt_url))
+	thumbnail_img = crop_image(get_yt_thumbnail(yt_url))
 	cr.save()
 	surface = surface_from_pil(thumbnail_img) #.transpose(Image.ROTATE_180)
 	sfx, sfy = (width*MM_TO_POINTS/surface.get_width(), height*MM_TO_POINTS/surface.get_height())
@@ -87,19 +87,19 @@ def add_tag(cr, yt_url, off_x, off_y, margin, width, height):
 	cr.paint()
 	cr.restore()
 
-def crop_to_square(image):
-	width, height = image.size
-	# Find the smallest side length
-	min_side = min(width, height)
-	# Calculate coordinates for cropping
-	left = (width - min_side) / 2
-	top = (height - min_side) / 2
-	right = (width + min_side) / 2
-	bottom = (height + min_side) / 2
-	# Crop the image
-	cropped_image = cropped_image.crop((left, top, right, bottom))
-	cropped_image.show()
-	return cropped_image
+def crop_image(image):
+    width, height = image.size
+    
+    if width != height:
+        crop_size = min(width, height)
+        left = (width - crop_size) // 2
+        top = (height - crop_size) // 2
+        right = left + crop_size
+        bottom = top + crop_size
+        
+        return image.crop((left, top, right, bottom))
+    else:
+        return image
 
 def draw():
 	parser = argparse.ArgumentParser(description='Convert Youtube URLs to QR code tags')
